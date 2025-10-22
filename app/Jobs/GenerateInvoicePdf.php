@@ -2,29 +2,37 @@
 
 namespace App\Jobs;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-
+use App\Models\Invoice;
 use App\Services\InvoicePdfService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
-class GenerateInvoicePdf implements ShouldQueue
+class GenerateInvoicePdfJob implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    protected $invoice;
+
+    public function __construct(Invoice $invoice)
     {
-        
+        $this->invoice = $invoice;
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(InvoicePdfService $service): void
+    public function handle(InvoicePdfService $pdfService)
     {
-        //generate pdf and save
-        $paths = $service->generateBulkPdf();
+        // 1️⃣ Update status to InProgress
+        $this->invoice->status = 'InProgress';
+        $this->invoice->save();
+
+        // 2️⃣ Generate PDF
+        $pdfPath = $pdfService->generatePdf($this->invoice);
+
+        // 3️⃣ Update invoice with PDF path and mark PDF as generated
+        $this->invoice->pdf_path = $pdfPath;
+        $this->invoice->status = 'Generated';
+        $this->invoice->save();
     }
 }

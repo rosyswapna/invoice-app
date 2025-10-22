@@ -2,28 +2,37 @@
 
 namespace App\Jobs;
 
+use App\Models\Invoice;
+use App\Mail\InvoiceMail;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Mail;
 
-use App\Services\InvoiceMailService;
-
-class SendInvoiceEmail implements ShouldQueue
+class SendInvoiceMailJob implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    protected $invoice;
+
+    public function __construct(Invoice $invoice)
     {
-        //
+        $this->invoice = $invoice;
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(InvoiceMailService $service): void
+    public function handle()
     {
-        $service->sendBulkInvoices();
+        if (!file_exists($this->invoice->pdf_path)) {
+            // PDF not found, skip sending
+            return;
+        }
+
+        Mail::to($this->invoice->customer_email)
+            ->send(new InvoiceMail($this->invoice, $this->invoice->pdf_path));
+
+        $this->invoice->status = 'Sent';
+        $this->invoice->save();
     }
 }

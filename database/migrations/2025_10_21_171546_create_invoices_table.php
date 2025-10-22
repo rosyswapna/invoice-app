@@ -24,7 +24,7 @@ return new class extends Migration
             $table->decimal('discount', 10, 2)->default(0);
             $table->decimal('total', 10, 2)->default(0);
 
-            $table->enum('status', ['Pending', 'Generated','InProgress', 'Send'])->default('Pending');
+            $table->enum('status', ['Pending', 'Generated','InProgress', 'Sent'])->default('Pending');
 
             $table->text('notes')->nullable();
             $table->timestamps();

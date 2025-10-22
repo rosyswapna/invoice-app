@@ -45,16 +45,16 @@ class InvoiceMailService
     public function sendBulkInvoices()
     {
 
-        $invoices = Invoice::where('status', 'Generated')
-                   ->limit(5)
-                   ->get();
+        Invoice::where('status', 'Generated')->chunk(50, function ($invoices) {
+            foreach ($invoices as $invoice) {
+                $this->sendInvoice($invoice);
 
-        foreach ($invoices as $invoice) {
-            $this->sendInvoice($invoice);
+                // Update status to 'Send' 
+                $invoice->status = 'Send';
+                $invoice->save();
+            }
+        });
 
-            // Update status to 'Send' 
-            $invoice->status = 'Send';
-            $invoice->save();
-        }
+        
     }
 }
